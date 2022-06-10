@@ -1,34 +1,10 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2015 Ian Coleman
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, Subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or Substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 package strcase
 
 import (
 	"testing"
 )
 
-func toCamel(tb testing.TB) {
+func toPascal(tb testing.TB) {
 	cases := [][]string{
 		{"test_case", "TestCase"},
 		{"test.case", "TestCase"},
@@ -39,13 +15,45 @@ func toCamel(tb testing.TB) {
 		{"many_many_words", "ManyManyWords"},
 		{"AnyKind of_string", "AnyKindOfString"},
 		{"odd-fix", "OddFix"},
+		{"AnyKind.of_string13_37", "AnyKindOfString13_37"},
+		{"AnyKind.of_string13_37 test", "AnyKindOfString13_37Test"},
 		{"numbers2And55with000", "Numbers2And55With000"},
 		{"ID", "Id"},
 	}
 	for _, i := range cases {
+		in, out := i[0], i[1]
+		result := ToPascal(in, New())
+		if result != out {
+			tb.Errorf("%q (%q != %q)", in, result, out)
+		}
+	}
+}
+
+func TestToPascal(t *testing.T) {
+	toPascal(t)
+}
+
+func BenchmarkToPascal(b *testing.B) {
+	benchmarkCamelTest(b, toPascal)
+}
+
+func toCamel(tb testing.TB) {
+	cases := [][]string{
+		{"foo-bar", "fooBar"},
+		{"TestCase", "testCase"},
+		{"", ""},
+		{"AnyKind of_string", "anyKindOfString"},
+		{"AnyKind.of-string", "anyKindOfString"},
+		{"ID", "id"},
+		{"AnyKind.of_string13_37", "anyKindOfString13_37"},
+		{"AnyKind.of_string13_37test", "anyKindOfString13_37Test"},
+		{"some string", "someString"},
+		{" some string", "someString"},
+	}
+	for _, i := range cases {
 		in := i[0]
 		out := i[1]
-		result := ToCamel(in)
+		result := ToCamel(in, New())
 		if result != out {
 			tb.Errorf("%q (%q != %q)", in, result, out)
 		}
@@ -56,36 +64,7 @@ func TestToCamel(t *testing.T) {
 	toCamel(t)
 }
 
-func BenchmarkToCamel(b *testing.B) {
-	benchmarkCamelTest(b, toCamel)
-}
-
-func toLowerCamel(tb testing.TB) {
-	cases := [][]string{
-		{"foo-bar", "fooBar"},
-		{"TestCase", "testCase"},
-		{"", ""},
-		{"AnyKind of_string", "anyKindOfString"},
-		{"AnyKind.of-string", "anyKindOfString"},
-		{"ID", "id"},
-		{"some string", "someString"},
-		{" some string", "someString"},
-	}
-	for _, i := range cases {
-		in := i[0]
-		out := i[1]
-		result := ToLowerCamel(in)
-		if result != out {
-			tb.Errorf("%q (%q != %q)", in, result, out)
-		}
-	}
-}
-
-func TestToLowerCamel(t *testing.T) {
-	toLowerCamel(t)
-}
-
-func TestCustomAcronymsToCamel(t *testing.T) {
+func TestCustomAcronymsToPascal(t *testing.T) {
 	tests := []struct {
 		name         string
 		acronymKey   string
@@ -113,15 +92,17 @@ func TestCustomAcronymsToCamel(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ConfigureAcronym(test.acronymKey, test.acronymValue)
-			if result := ToCamel(test.acronymKey); result != test.expected {
+			conf := New()
+			conf[test.acronymKey] = test.acronymValue
+
+			if result := ToPascal(test.acronymKey, conf); result != test.expected {
 				t.Errorf("expected custom acronym result %s, got %s", test.expected, result)
 			}
 		})
 	}
 }
 
-func TestCustomAcronymsToLowerCamel(t *testing.T) {
+func TestCustomAcronymsToCamel(t *testing.T) {
 	tests := []struct {
 		name         string
 		acronymKey   string
@@ -149,8 +130,10 @@ func TestCustomAcronymsToLowerCamel(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ConfigureAcronym(test.acronymKey, test.acronymValue)
-			if result := ToLowerCamel(test.acronymKey); result != test.expected {
+			conf := New()
+			conf[test.acronymKey] = test.acronymValue
+
+			if result := ToCamel(test.acronymKey, conf); result != test.expected {
 				t.Errorf("expected custom acronym result %s, got %s", test.expected, result)
 			}
 		})
@@ -158,7 +141,7 @@ func TestCustomAcronymsToLowerCamel(t *testing.T) {
 }
 
 func BenchmarkToLowerCamel(b *testing.B) {
-	benchmarkCamelTest(b, toLowerCamel)
+	benchmarkCamelTest(b, toCamel)
 }
 
 func benchmarkCamelTest(b *testing.B, fn func(testing.TB)) {
